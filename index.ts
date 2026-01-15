@@ -9,12 +9,13 @@ const messagesFileFullPath = path.join(import.meta.dirname, "messages.json");
 
 const updateFile = createAsyncBatcher<
   {
-    message: string;
-    lang: string;
+    phrases: {
+      [lang: string]: string[];
+    };
   },
   void
 >({
-  batchPeriodInMs: 300,
+  batchPeriodInMs: 5e3,
   timeoutPeriod: 15000,
   async batcherCallback(promises) {
     if (!existsSync(messagesFileFullPath)) {
@@ -27,18 +28,31 @@ const updateFile = createAsyncBatcher<
       };
     } = JSON.parse((await readFile(messagesFileFullPath, "utf8")) || "{}");
     for (const promise of promises) {
-      const message = promise.content.message.trim().toLowerCase();
-      const lang = promise.content.lang.toLowerCase();
-      if (!messages[lang]) {
-        messages[lang] = {};
-      }
-      if (message.match(/^(?:\b[a-z]+\b)(?:(?:\s|\n)+|\(?|\)?|\b[a-z]+?\b|,|\?|\.|!)*?$/)) {
-          console.log(`Adding translation for "${message}" in ${lang}`);
-          messages[lang][message] = true;
-      } else {
-          console.error(`Invalid translation for "${message}" in ${lang}`);
-      }
       promise.resolve();
+
+      const phrases = promise.content.phrases;
+      for (const _lang in phrases) {
+        const lang = _lang.toLowerCase();
+
+        if (!messages[lang]) {
+          messages[lang] = {};
+        }
+        const msgs = phrases[lang];
+        for (const msg of msgs || []) {
+          const message = msg.trim().toLowerCase();
+
+          if (
+            message.match(
+              /^(?:(?:\s|\n)+|\(|\)|\-|'|\$|\>|\<|[0-9]+|\:|[a-z]+?|pm2|,|\?|\.|!)+?$/i
+            )
+          ) {
+            console.log(`Adding translation for "${message}" in ${lang}`);
+            messages[lang][message] = true;
+          } else {
+            console.error(`Invalid translation for "${message}" in ${lang}`);
+          }
+        }
+      }
     }
     writeFileSync(messagesFileFullPath, JSON.stringify(messages, null, 4));
   },
@@ -57,10 +71,27 @@ app.post("/api/add-translation", async (req, res) => {
     res.status(400).json({ error: "Missing message or lang" });
     return;
   }
-  await updateFile.run({ message, lang });
+  await updateFile.run({
+    phrases: {
+      [lang]: [message],
+    },
+  });
   res.status(200).json({ message: "Translation added" });
 });
 
+app.post("/api/add-translations", async (req, res) => {
+  const {
+    phrases,
+  }: {
+    phrases: {
+      [lang: string]: string[];
+    };
+  } = req.body || {};
+  updateFile.run({
+    phrases,
+  });
+  res.status(200).json({ message: "Translation added" });
+});
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });
