@@ -40,12 +40,16 @@ const updateFile = createAsyncBatcher<
         const msgs = phrases[lang];
         for (const msg of msgs || []) {
           const message = msg.trim().toLowerCase();
-
           if (
             message.match(
-              /^(?:(?:\s|\n)+|\(|\)|\-|'|\$|\>|\<|[0-9]+|\:|[a-z]+?|pm2|,|\?|\.|!)+?$/i
+              /^[a-z]+\b(?:(?:\s|\n)[a-z\.\,\(\)\-\?\_]+)*?$/i,
             )
           ) {
+            // if (
+            //   message.match(
+            //     /^(?:(?:\s|\n)+|\(|\)|\-|'|\$|\>|\<|[0-9]+|\:|[a-z]+?|pm2|,|\?|\.|!)+?$/i
+            //   )
+            // ) {
             console.log(`Adding translation for "${message}" in ${lang}`);
             messages[lang][message] = true;
           } else {

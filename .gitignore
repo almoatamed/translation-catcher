@@ -5,7 +5,8 @@ node_modules
 out
 dist
 *.tgz
-
+*.ignore.*
+list.*
 # code coverage
 coverage
 *.lcov
