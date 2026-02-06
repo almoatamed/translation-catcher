@@ -7,6 +7,9 @@ import { readFile } from "fs/promises";
 
 const messagesFileFullPath = path.join(import.meta.dirname, "messages.json");
 
+const matchingRegex =
+  /^(\(?\[?\{?\b[a-z\-_]+\b\)?\]?\}?(?:[\!\?\.\,]|\s|\n)*?)+?$/i;
+
 const updateFile = createAsyncBatcher<
   {
     phrases: {
@@ -40,16 +43,7 @@ const updateFile = createAsyncBatcher<
         const msgs = phrases[lang];
         for (const msg of msgs || []) {
           const message = msg.trim().toLowerCase();
-          if (
-            message.match(
-              /^[a-z]+\b(?:(?:\s|\n)[a-z\.\,\(\)\-\?\_]+)*?$/i,
-            )
-          ) {
-            // if (
-            //   message.match(
-            //     /^(?:(?:\s|\n)+|\(|\)|\-|'|\$|\>|\<|[0-9]+|\:|[a-z]+?|pm2|,|\?|\.|!)+?$/i
-            //   )
-            // ) {
+          if (message.match(matchingRegex)) {
             console.log(`Adding translation for "${message}" in ${lang}`);
             messages[lang][message] = true;
           } else {
